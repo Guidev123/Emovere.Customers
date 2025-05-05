@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Emovere.Core\src\Emovere.SharedKernel\Emovere.SharedKernel.csproj" />
+  </ItemGroup>
+
 </Project>
