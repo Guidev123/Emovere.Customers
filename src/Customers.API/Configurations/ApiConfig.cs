@@ -4,6 +4,7 @@ using Customers.API.Middlewares;
 using Customers.Application.Services;
 using Customers.Application.Services.Interfaces;
 using Customers.Domain.Interfaces;
+using Customers.Infrastructure.BackgroundServices;
 using Customers.Infrastructure.Data;
 using Customers.Infrastructure.Data.Repositories;
 using Emovere.Infrastructure.Bus;
@@ -11,9 +12,11 @@ using Emovere.Infrastructure.Email;
 using Emovere.Infrastructure.EventSourcing;
 using Emovere.SharedKernel.Abstractions.Mediator;
 using Emovere.SharedKernel.Notifications;
+using KeyPairJWT.Configuration;
 using Microsoft.EntityFrameworkCore;
 using MidR.DependencyInjection;
 using SendGrid.Extensions.DependencyInjection;
+using Serilog;
 using System.Reflection;
 
 namespace Customers.API.Configurations
@@ -26,6 +29,8 @@ namespace Customers.API.Configurations
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddMemoryCache();
             builder.Services.AddGrpc();
+            builder.Services.AddJwtConfiguration(builder.Configuration);
+            builder.Services.AddAuthorization();
 
             return builder;
         }
@@ -33,6 +38,26 @@ namespace Customers.API.Configurations
         public static WebApplicationBuilder AddModelsConfiguration(this WebApplicationBuilder builder)
         {
             builder.Services.Configure<KeycloakExtension>(builder.Configuration.GetSection(nameof(KeycloakExtension)));
+
+            return builder;
+        }
+
+        public static WebApplicationBuilder AddSerilog(this WebApplicationBuilder builder)
+        {
+            builder.Host.UseSerilog((context, services, configuration) =>
+            {
+                configuration.ReadFrom.Configuration(context.Configuration);
+
+                if (context.HostingEnvironment.IsDevelopment())
+                    configuration.WriteTo.Debug();
+            });
+
+            return builder;
+        }
+
+        public static WebApplicationBuilder AddBackgroundServices(this WebApplicationBuilder builder)
+        {
+            builder.Services.AddHostedService<DeletedUserIntegrationEventHandler>();
 
             return builder;
         }
@@ -100,6 +125,13 @@ namespace Customers.API.Configurations
             return builder;
         }
 
+        public static WebApplication UseSecurity(this WebApplication app)
+        {
+            app.UseAuthConfiguration();
+
+            return app;
+        }
+
         public static WebApplication UseMiddlewares(this WebApplication app)
         {
             app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -110,6 +142,21 @@ namespace Customers.API.Configurations
         public static WebApplication UseGrpcServices(this WebApplication app)
         {
             app.MapGrpcService<CustomerGrpcService>();
+
+            return app;
+        }
+
+        public static WebApplication UseSerilogSettings(this WebApplication app)
+        {
+            app.UseSerilogRequestLogging(options =>
+            {
+                options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+                {
+                    diagnosticContext.Set("RequestHost", httpContext.Request.Host);
+                    diagnosticContext.Set("RequestPath", httpContext.Request.Path);
+                    diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
+                };
+            });
 
             return app;
         }

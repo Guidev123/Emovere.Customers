@@ -17,9 +17,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Emovere.Core\src\Emovere.Communication\Emovere.Communication.csproj" />
     <ProjectReference Include="..\..\..\Emovere.Core\src\Emovere.Infrastructure\Emovere.Infrastructure.csproj" />
     <ProjectReference Include="..\Customers.Application\Customers.Application.csproj" />
   </ItemGroup>

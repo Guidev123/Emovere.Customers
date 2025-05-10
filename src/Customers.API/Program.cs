@@ -2,12 +2,13 @@ using Customers.API.Configurations;
 
 var builder = WebApplication
     .CreateBuilder(args)
+    .AddSerilog()
     .AddCustomersDbContextConfiguration()
     .AddModelsConfiguration()
     .AddRepositoriesConfiguration()
+    .AddBackgroundServices()
     .AddApplicationServices()
     .AddMediatorHandlersConfiguration()
-    .AddSecurityConfig()
     .AddEmailServicesConfiguration()
     .AddServicesConfiguration()
     .AddMessageBusConfiguration()
@@ -17,9 +18,10 @@ var builder = WebApplication
 
 var app = builder
     .Build()
+    .UseSerilogSettings()
     .UseMiddlewares()
     .UseGrpcServices()
-    .UseSwaggerConfig(builder)
-    .UseApiSecurityConfig();
+    .UseSwaggerConfig()
+    .UseSecurity();
 
 app.Run();
