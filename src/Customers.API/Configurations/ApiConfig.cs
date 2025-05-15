@@ -1,36 +1,25 @@
 ﻿using Customers.API.Configurations.Extensions;
 using Customers.API.gRPC;
-using Customers.API.Middlewares;
 using Customers.Application.Services;
 using Customers.Application.Services.Interfaces;
 using Customers.Domain.Interfaces;
 using Customers.Infrastructure.BackgroundServices;
 using Customers.Infrastructure.Data;
 using Customers.Infrastructure.Data.Repositories;
-using Emovere.Infrastructure.Bus;
-using Emovere.Infrastructure.Email;
-using Emovere.Infrastructure.EventSourcing;
-using Emovere.SharedKernel.Abstractions.Mediator;
-using Emovere.SharedKernel.Notifications;
-using KeyPairJWT.Configuration;
 using Microsoft.EntityFrameworkCore;
 using MidR.DependencyInjection;
-using SendGrid.Extensions.DependencyInjection;
-using Serilog;
 using System.Reflection;
 
 namespace Customers.API.Configurations
 {
     public static class ApiConfig
     {
+        private const string HANDLER_ASSEMBLY_NAME = "Customers.Application";
+
         public static WebApplicationBuilder AddServicesConfiguration(this WebApplicationBuilder builder)
         {
-            builder.Services.AddEventStoreConfiguration();
-            builder.Services.AddHttpContextAccessor();
             builder.Services.AddMemoryCache();
             builder.Services.AddGrpc();
-            builder.Services.AddJwtConfiguration(builder.Configuration);
-            builder.Services.AddAuthorization();
 
             return builder;
         }
@@ -38,19 +27,6 @@ namespace Customers.API.Configurations
         public static WebApplicationBuilder AddModelsConfiguration(this WebApplicationBuilder builder)
         {
             builder.Services.Configure<KeycloakExtension>(builder.Configuration.GetSection(nameof(KeycloakExtension)));
-
-            return builder;
-        }
-
-        public static WebApplicationBuilder AddSerilog(this WebApplicationBuilder builder)
-        {
-            builder.Host.UseSerilog((context, services, configuration) =>
-            {
-                configuration.ReadFrom.Configuration(context.Configuration);
-
-                if (context.HostingEnvironment.IsDevelopment())
-                    configuration.WriteTo.Debug();
-            });
 
             return builder;
         }
@@ -76,31 +52,6 @@ namespace Customers.API.Configurations
             return builder;
         }
 
-        public static WebApplicationBuilder AddEmailServicesConfiguration(this WebApplicationBuilder builder)
-        {
-            builder.Services.AddSendGrid(x =>
-            {
-                x.ApiKey = builder.Configuration.GetValue<string>("EmailSettings:ApiKey");
-            });
-            builder.Services.AddScoped<IEmailService, EmailService>();
-
-            return builder;
-        }
-
-        public static WebApplicationBuilder AddCustomMiddlewares(this WebApplicationBuilder builder)
-        {
-            builder.Services.AddTransient<GlobalExceptionMiddleware>();
-
-            return builder;
-        }
-
-        public static WebApplicationBuilder AddNotificationConfiguration(this WebApplicationBuilder builder)
-        {
-            builder.Services.AddScoped<INotificator, Notificator>();
-
-            return builder;
-        }
-
         public static WebApplicationBuilder AddCustomersDbContextConfiguration(this WebApplicationBuilder builder)
         {
             builder.Services.AddDbContext<CustomersDbContext>(options =>
@@ -111,52 +62,15 @@ namespace Customers.API.Configurations
 
         public static WebApplicationBuilder AddMediatorHandlersConfiguration(this WebApplicationBuilder builder)
         {
-            Assembly.Load("Customers.Application");
-            builder.Services.AddScoped<IMediatorHandler, MediatorHandler>();
-            builder.Services.AddMidR("Customers.Application");
+            Assembly.Load(HANDLER_ASSEMBLY_NAME);
+            builder.Services.AddMidR(HANDLER_ASSEMBLY_NAME);
 
             return builder;
-        }
-
-        public static WebApplicationBuilder AddMessageBusConfiguration(this WebApplicationBuilder builder)
-        {
-            builder.Services.AddMessageBus(builder.Configuration.GetConnectionString("MessageBusConnection") ?? string.Empty);
-
-            return builder;
-        }
-
-        public static WebApplication UseSecurity(this WebApplication app)
-        {
-            app.UseAuthConfiguration();
-
-            return app;
-        }
-
-        public static WebApplication UseMiddlewares(this WebApplication app)
-        {
-            app.UseMiddleware<GlobalExceptionMiddleware>();
-
-            return app;
         }
 
         public static WebApplication UseGrpcServices(this WebApplication app)
         {
             app.MapGrpcService<CustomerGrpcService>();
-
-            return app;
-        }
-
-        public static WebApplication UseSerilogSettings(this WebApplication app)
-        {
-            app.UseSerilogRequestLogging(options =>
-            {
-                options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-                {
-                    diagnosticContext.Set("RequestHost", httpContext.Request.Host);
-                    diagnosticContext.Set("RequestPath", httpContext.Request.Path);
-                    diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
-                };
-            });
 
             return app;
         }

@@ -19,6 +19,7 @@
 		<Protobuf Include="Protos\customerservice.proto" GrpcServices="Server" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\..\..\Emovere.Core\src\Emovere.WebApi\Emovere.WebApi.csproj" />
 		<ProjectReference Include="..\Customers.Infrastructure\Customers.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>
